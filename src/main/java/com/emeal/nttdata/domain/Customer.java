@@ -2,23 +2,23 @@ package com.emeal.nttdata.domain;
 
 import com.emeal.nttdata.model.enums.CustomerType;
 import com.emeal.nttdata.model.enums.DocumentType;
-import com.fasterxml.jackson.annotation.JsonTypeId;
 import io.quarkus.mongodb.panache.common.MongoEntity;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.bson.codecs.pojo.annotations.BsonId;
 
 @Builder
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-@MongoEntity(collection = "customer")
+@MongoEntity(collection = "QuarkusCustomer")
 public class Customer {
 
-  @JsonTypeId
+  @BsonId
   private String clientId;
   private String document;
   private DocumentType documentType;

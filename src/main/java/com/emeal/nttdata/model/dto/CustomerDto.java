@@ -15,7 +15,6 @@ import lombok.Setter;
 @AllArgsConstructor
 public class CustomerDto {
 
-  private String clientId;
   @Pattern(regexp = "^[A-Za-z0-9]{1,11}$",
       message = "El documento debe tener hasta 11 caracteres alfanuméricos")
   private String document;

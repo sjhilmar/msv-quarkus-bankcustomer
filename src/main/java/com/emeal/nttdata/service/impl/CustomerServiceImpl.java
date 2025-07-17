@@ -12,11 +12,13 @@ import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import org.bson.types.ObjectId;
 
+import java.util.UUID;
+
 @ApplicationScoped
 public class CustomerServiceImpl implements CustomerService {
 
   private final CustomerRepository customerRepository;
-  private final CustomerMapper customerMapper = CustomerMapper.INSTANCE;
+  private static final CustomerMapper customerMapper = CustomerMapper.INSTANCE;
 
   public CustomerServiceImpl(CustomerRepository customerRepository) {
     this.customerRepository = customerRepository;
@@ -24,16 +26,16 @@ public class CustomerServiceImpl implements CustomerService {
 
   @Override
   public Uni<CustomerDto> createCustomer(CustomerDto customerDto) {
-    return customerRepository.findByDocumentAndDocumentType(
-            customerDto.getDocument(),
-            customerDto.getDocumentType().getDescription())
-        .onItem().ifNotNull().failWith(new IllegalArgumentException("El cliente ya existe"))
-        .onItem().ifNull().continueWith(() -> {
+    return customerRepository.findByDocumentAndDocumentType(customerDto.getDocument(),
+            customerDto.getDocumentType().toString())
+        .onItem().ifNotNull().failWith(new RuntimeException("El cliente ya existe"))
+        .onItem().ifNull().continueWith( () -> {
           Customer customer = customerMapper.customerDtoToCustomer(customerDto);
+          customer.setClientId(UUID.randomUUID().toString());
           customer.setRegistrationDate(getDateTimeNow());
-          customerRepository.persist(customer);
           return customer;
-        }).map(customerMapper::customerToCustomerDto);
+        }).call(customerRepository::persist)
+        .map(customerMapper::customerToCustomerDto);
   }
 
   @Override
@@ -58,9 +60,8 @@ public class CustomerServiceImpl implements CustomerService {
   @Override
   public Uni<CustomerDto> updateCustomer(String id, CustomerDto customerDto) {
     return customerRepository.findById(new ObjectId(id))
-        .onItem().ifNull().failWith(new IllegalArgumentException("El cliente no existe"))
-        .onItem().transform(existingCustomer -> {
-          return existingCustomer.builder()
+        .onItem().ifNull().failWith(new RuntimeException("El cliente no existe"))
+        .onItem().transform(existingCustomer -> Customer.builder()
               .firstName(customerDto.getFirstName())
               .lastName(customerDto.getLastName())
               .phoneNumber(customerDto.getPhoneNumber())
@@ -70,8 +71,7 @@ public class CustomerServiceImpl implements CustomerService {
               .state(customerDto.getState())
               .dateOfBirth(customerDto.getDateOfBirth())
               .lastUpdateDate(getDateTimeNow())
-              .build();
-        })
+              .build())
         .call(customerRepository::persist)
         .map(customerMapper::customerToCustomerDto);
   }
