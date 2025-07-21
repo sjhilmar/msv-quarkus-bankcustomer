@@ -1,10 +1,8 @@
 package com.emeal.nttdata.service;
 
-import com.emeal.nttdata.domain.Customer;
 import com.emeal.nttdata.model.dto.CustomerDto;
 import io.smallrye.mutiny.Multi;
 import io.smallrye.mutiny.Uni;
-import org.bson.types.ObjectId;
 
 public interface CustomerService {
 
@@ -12,12 +10,12 @@ public interface CustomerService {
 
   Multi<CustomerDto> getAllCustomers();
 
-  Uni<CustomerDto> getCustomerById(String id);
-
   Uni<CustomerDto> getCustomerByDocument(String document);
 
-  Uni<CustomerDto> updateCustomer(String id, CustomerDto customerDto);
+  Uni<CustomerDto> updateCustomer(String document, String documentType, CustomerDto customerDto);
 
-  Uni<Void> deleteCustomer(String id);
+  Uni<Void> deleteCustomer(String document, String documentType);
+
+  Uni<CustomerDto> getCustomerByClientId(String clientId);
 
 }

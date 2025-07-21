@@ -1,19 +1,24 @@
 package com.emeal.nttdata.service.impl;
 
-import static com.emeal.nttdata.util.CustomerUtil.getDateTimeNow;
+import static com.emeal.nttdata.util.Constants.DESC_CUSTOMER_NOT_EXISTS;
+import static com.emeal.nttdata.util.CustomerUtil.getCurrentDateTimeFormatted;
+import static com.emeal.nttdata.util.exception.dto.ExceptionCatalog.ERBS001;
+import static com.emeal.nttdata.util.exception.dto.ExceptionCatalog.ERBS002;
 
 import com.emeal.nttdata.domain.Customer;
 import com.emeal.nttdata.mapper.CustomerMapper;
 import com.emeal.nttdata.model.dto.CustomerDto;
 import com.emeal.nttdata.repository.CustomerRepository;
 import com.emeal.nttdata.service.CustomerService;
+import com.emeal.nttdata.util.exception.BusinessException;
 import io.smallrye.mutiny.Multi;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
-import org.bson.types.ObjectId;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.UUID;
 
+@Slf4j
 @ApplicationScoped
 public class CustomerServiceImpl implements CustomerService {
 
@@ -28,11 +33,12 @@ public class CustomerServiceImpl implements CustomerService {
   public Uni<CustomerDto> createCustomer(CustomerDto customerDto) {
     return customerRepository.findByDocumentAndDocumentType(customerDto.getDocument(),
             customerDto.getDocumentType().toString())
-        .onItem().ifNotNull().failWith(new RuntimeException("El cliente ya existe"))
+        .onItem().ifNotNull().failWith(new BusinessException(ERBS001.getCode(),
+        ERBS001.getDescription(), ERBS001.getHttpStatus()))
         .onItem().ifNull().continueWith( () -> {
           Customer customer = customerMapper.customerDtoToCustomer(customerDto);
           customer.setClientId(UUID.randomUUID().toString());
-          customer.setRegistrationDate(getDateTimeNow());
+          customer.setRegistrationDate(getCurrentDateTimeFormatted());
           return customer;
         }).call(customerRepository::persist)
         .map(customerMapper::customerToCustomerDto);
@@ -46,41 +52,54 @@ public class CustomerServiceImpl implements CustomerService {
   }
 
   @Override
-  public Uni<CustomerDto> getCustomerById(String id) {
-    return customerRepository.findById(new ObjectId(id))
-        .map(customerMapper::customerToCustomerDto);
-  }
-
-  @Override
   public Uni<CustomerDto> getCustomerByDocument(String document) {
     return customerRepository.findByDocument(document)
         .map(customerMapper::customerToCustomerDto);
   }
 
   @Override
-  public Uni<CustomerDto> updateCustomer(String id, CustomerDto customerDto) {
-    return customerRepository.findById(new ObjectId(id))
-        .onItem().ifNull().failWith(new RuntimeException("El cliente no existe"))
-        .onItem().transform(existingCustomer -> Customer.builder()
-              .firstName(customerDto.getFirstName())
-              .lastName(customerDto.getLastName())
-              .phoneNumber(customerDto.getPhoneNumber())
-              .address(customerDto.getAddress())
-              .email(customerDto.getEmail())
-              .gender(customerDto.getGender())
-              .state(customerDto.getState())
-              .dateOfBirth(customerDto.getDateOfBirth())
-              .lastUpdateDate(getDateTimeNow())
-              .build())
-        .call(customerRepository::persist)
+  public Uni<CustomerDto> updateCustomer(String document, String documentType ,
+                                         CustomerDto customerDto) {
+    return customerRepository.findByDocumentAndDocumentType(document, documentType)
+        .onItem().ifNull().failWith(()-> {
+          log.error(DESC_CUSTOMER_NOT_EXISTS + " with document: {} and document type: {}",
+              document, documentType);
+          throw new BusinessException(ERBS002.getCode(),
+              ERBS002.getDescription() + ", document: " + document
+                  + ", documentType: " + documentType, ERBS002.getHttpStatus());
+        })
+        .onItem().transform(existingCustomer -> {
+          existingCustomer.setFirstName(customerDto.getFirstName());
+          existingCustomer.setLastName(customerDto.getLastName());
+          existingCustomer.setPhoneNumber(customerDto.getPhoneNumber());
+          existingCustomer.setAddress(customerDto.getAddress());
+          existingCustomer.setEmail(customerDto.getEmail());
+          existingCustomer.setGender(customerDto.getGender());
+          existingCustomer.setState(customerDto.getState());
+          existingCustomer.setDateOfBirth(customerDto.getDateOfBirth());
+          existingCustomer.setLastUpdateDate(getCurrentDateTimeFormatted());
+          return  existingCustomer;
+        })
+        .call(customerRepository::update)
         .map(customerMapper::customerToCustomerDto);
   }
 
   @Override
-  public Uni<Void> deleteCustomer(String id) {
-    return customerRepository.findById(new ObjectId(id))
-        .onItem().ifNull().failWith(new RuntimeException("El cliente no existe"))
+  public Uni<Void> deleteCustomer(String document, String documentType) {
+    return customerRepository.findByDocument(document)
+        .onItem().ifNull().failWith(new RuntimeException(DESC_CUSTOMER_NOT_EXISTS))
         .call(customerRepository::delete)
         .replaceWithVoid();
+  }
+
+  /**
+   * @param clientId
+   * @return
+   */
+  @Override
+  public Uni<CustomerDto> getCustomerByClientId(String clientId) {
+   return customerRepository.findByClientId(clientId)
+       .onItem().ifNull().failWith(new RuntimeException(DESC_CUSTOMER_NOT_EXISTS))
+       .map(customerMapper::customerToCustomerDto);
   }
 }

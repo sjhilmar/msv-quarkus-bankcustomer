@@ -17,4 +17,8 @@ public class CustomerRepository implements ReactivePanacheMongoRepository<Custom
         .firstResult();
   }
 
+  public Uni<Customer> findByClientId(String clientId) {
+    return find("_id", clientId).firstResult();
+  }
+
 }
