@@ -4,6 +4,7 @@ import com.emeal.nttdata.util.exception.BusinessException;
 import com.emeal.nttdata.util.exception.dto.ExceptionResponse;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.ext.ExceptionMapper;
+import jakarta.ws.rs.ext.Provider;
 
 import static com.emeal.nttdata.util.CustomerUtil.getCurrentDateTimeFormatted;
 
@@ -23,6 +24,7 @@ import static com.emeal.nttdata.util.CustomerUtil.getCurrentDateTimeFormatted;
  * </ul>
  * @version 1.0
  */
+@Provider
 public class BusinessExceptionMapper implements ExceptionMapper<BusinessException> {
   /**
    * @param exception the exception to map to a response.

@@ -66,22 +66,7 @@ public class CustomerResource {
     return customerService.createCustomer(customerDto)
         .onItem().transform(createdCustomer -> Response.status(Response.Status.CREATED)
             .entity(createdCustomer).build())
-        .onFailure().invoke(e -> log.error("Error creating customer: {}", customerDto, e))
-        .onFailure().recoverWithItem(e -> {
-          if (e instanceof BusinessException be) {
-            return Response.status(be.getHttpStatus())
-                .entity(ExceptionResponse.builder()
-                    .code(be.getCode())
-                    .dateTimeException(getCurrentDateTimeFormatted())
-                    .description(be.getDescription())
-                    .httpStatus(be.getHttpStatus())
-                    .typeError(be.getType())
-                    .build())
-                .build();
-          }
-            return Response.status(Response.Status.BAD_REQUEST)
-                .entity(ERTC001.getCode() + ": " + ERBS001.getDescription()).build();
-        });
+        .onFailure().invoke(e -> log.error("Error creating customer: {}", customerDto, e));
   }
 
   @PUT
